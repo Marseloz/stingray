@@ -15,7 +15,7 @@ GuiBridgeSender::GuiBridgeSender(boost::asio::io_service &io_service) : Node("Gu
     this->fromDriverMessageSubscriber = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
         ros_config["topics"]["from_driver_parcel"], 1000, std::bind(&GuiBridgeSender::from_driver_callback, this, std::placeholders::_1));
 
-    this->publishingTimer = this->create_wall_timer(1s, std::bind(&GuiBridgeSender::timerCallback, this));
+    // this->publishingTimer = this->create_wall_timer(1s, std::bind(&GuiBridgeSender::timerCallback, this));
 }
 
 GuiBridgeSender::~GuiBridgeSender() { _send_socket.close(); }
@@ -28,7 +28,7 @@ void GuiBridgeSender::from_driver_callback(const std_msgs::msg::UInt8MultiArray 
     bool ok = fromDriverMessage.parseVector(received_vector);
     RCLCPP_INFO(this->get_logger(), "Received from driver");
 
-    if (ok) {
+    // if (ok) {
         toGuiMessage.roll = fromDriverMessage.roll;
         toGuiMessage.pitch = fromDriverMessage.pitch;
         toGuiMessage.yaw = fromDriverMessage.yaw;
@@ -36,16 +36,19 @@ void GuiBridgeSender::from_driver_callback(const std_msgs::msg::UInt8MultiArray 
         toGuiMessage.rollSpeed = fromDriverMessage.rollSpeed;
         toGuiMessage.pitchSpeed = fromDriverMessage.pitchSpeed;
         toGuiMessage.yawSpeed = fromDriverMessage.yawSpeed;
+                RCLCPP_INFO(this->get_logger(), "Sent to gui yaw %f", fromDriverMessage.yaw);
+
 
         boost::system::error_code err;
         _send_socket.send_to(boost::asio::buffer(toGuiMessage.formVector()), _send_endpoint, 0, err);
         RCLCPP_INFO(this->get_logger(), "Sent to gui %s", err.message().c_str());
-    } else
-        RCLCPP_WARN(this->get_logger(), "Receive from driver: wrong checksum");
+    // } else
+        // RCLCPP_WARN(this->get_logger(), "Receive from driver: wrong checksum");
 }
 
 void GuiBridgeSender::timerCallback() {
     boost::system::error_code err;
+
     _send_socket.send_to(boost::asio::buffer(toGuiMessage.formVector()), _send_endpoint, 0, err);
     RCLCPP_INFO(this->get_logger(), "Sent to gui %s", err.message().c_str());
 }
@@ -93,6 +96,10 @@ void GuiBridgeReceiver::from_gui_callback(const boost::system::error_code &error
     for (int i = 0; i < DevAmount; i++) {
         toDriverMessage.dev[i] = fromGuiMessage.dev[i];
     }
+
+    RCLCPP_INFO(this->get_logger(), "Received from gui march: %hi, lag: %hi, depth: %hi, roll: %hi, dev0: %hhi, dev1: %hhi, dev2: %hhi, flad %hhu",
+     fromGuiMessage.march, fromGuiMessage.lag, fromGuiMessage.depth,
+     fromGuiMessage.roll, fromGuiMessage.dev[0], fromGuiMessage.dev[1], fromGuiMessage.dev[2], fromGuiMessage.flags);
 
     std::vector<uint8_t> output_vector = toDriverMessage.formVector();
     toDriverMessageContainer.data.clear();
