@@ -29,7 +29,7 @@ class GuiBridgeSender : public rclcpp::Node {
     ~GuiBridgeSender();
 
    private:
-    void from_driver_callback(const std_msgs::msg::UInt8MultiArray &msg);
+    void from_driver_callback();
     void timerCallback();
 
     // ROS subscribers
@@ -49,6 +49,7 @@ class GuiBridgeSender : public rclcpp::Node {
     udp::socket _send_socket;
 
     rclcpp::TimerBase::SharedPtr publishingTimer;  // Timer for publishing messages
+    rclcpp::TimerBase::SharedPtr publishingTimer_sparkfun;  // Timer for sparkfun
 
     serial::Serial ser;
 };

@@ -12,9 +12,10 @@ GuiBridgeSender::GuiBridgeSender(boost::asio::io_service &io_service) : Node("Gu
                 com_config["bridges"]["gui"]["send_to_ip"].get<std::string>().c_str(), com_config["bridges"]["gui"]["send_to_port"].get<int>());
 
     // ROS subscribers
-    this->fromDriverMessageSubscriber = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
-        ros_config["topics"]["from_driver_parcel"], 1000, std::bind(&GuiBridgeSender::from_driver_callback, this, std::placeholders::_1));
+    // this->fromDriverMessageSubscriber = this->create_subscription<std_msgs::msg::UInt8MultiArray>(
+    //     ros_config["topics"]["from_driver_parcel"], 1000, std::bind(&GuiBridgeSender::from_driver_callback, this, std::placeholders::_1));
 
+    this->publishingTimer_sparkfun = this->create_wall_timer(100ms, std::bind(&GuiBridgeSender::from_driver_callback, this));
     this->publishingTimer = this->create_wall_timer(100ms, std::bind(&GuiBridgeSender::timerCallback, this));
 
     try {
@@ -39,30 +40,30 @@ GuiBridgeSender::~GuiBridgeSender() {
     ser.close();
 }
 
-void GuiBridgeSender::from_driver_callback(const std_msgs::msg::UInt8MultiArray &msg) {
-    std::vector<uint8_t> received_vector;
-    for (int i = 0; i < FromDriverMessage::length; i++) {
-        received_vector.push_back(msg.data[i]);
-    }
-    bool ok = fromDriverMessage.parseVector(received_vector);
-    RCLCPP_INFO(this->get_logger(), "Received from driver");
+void GuiBridgeSender::from_driver_callback() {
+    // std::vector<uint8_t> received_vector;
+    // for (int i = 0; i < FromDriverMessage::length; i++) {
+    //     received_vector.push_back(msg.data[i]);
+    // }
+    // bool ok = fromDriverMessage.parseVector(received_vector);
+    // RCLCPP_INFO(this->get_logger(), "Received from driver");
 
-    if (ok) {
+    // if (ok) {
         // toGuiMessage.roll = fromDriverMessage.roll;
         // toGuiMessage.pitch = fromDriverMessage.pitch;
         // toGuiMessage.yaw = fromDriverMessage.yaw;
-        toGuiMessage.depth = fromDriverMessage.depth;
-        toGuiMessage.rollSpeed = fromDriverMessage.rollSpeed;
-        toGuiMessage.pitchSpeed = fromDriverMessage.pitchSpeed;
-        toGuiMessage.yawSpeed = fromDriverMessage.yawSpeed;
-                RCLCPP_INFO(this->get_logger(), "Sent to gui yaw %f", fromDriverMessage.yaw);
+        // toGuiMessage.depth = fromDriverMessage.depth;
+        // toGuiMessage.rollSpeed = fromDriverMessage.rollSpeed;
+        // toGuiMessage.pitchSpeed = fromDriverMessage.pitchSpeed;
+        // toGuiMessage.yawSpeed = fromDriverMessage.yawSpeed;
+        //         RCLCPP_INFO(this->get_logger(), "Sent to gui yaw %f", fromDriverMessage.yaw);
 
 
         boost::system::error_code err;
         _send_socket.send_to(boost::asio::buffer(toGuiMessage.formVector()), _send_endpoint, 0, err);
         RCLCPP_INFO(this->get_logger(), "Sent to gui %s", err.message().c_str());
     // } else
-        // RCLCPP_WARN(this->get_logger(), "Receive from driver: wrong checksum");
+    //     RCLCPP_WARN(this->get_logger(), "Receive from driver: wrong checksum");
 }
 
 void GuiBridgeSender::timerCallback() {
@@ -101,6 +102,7 @@ void GuiBridgeSender::timerCallback() {
         toGuiMessage.pitch = stof(imuData[6]);
         toGuiMessage.roll = stof(imuData[7]);
         toGuiMessage.yaw = stof(imuData[8]);
+          
         RCLCPP_INFO(this->get_logger(), "Pitch: '%e', Roll: '%e', Yaw: '%e'", toGuiMessage.pitch, toGuiMessage.roll, toGuiMessage.yaw);
     }
 }
